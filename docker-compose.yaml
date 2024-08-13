@@ -1,0 +1,20 @@
+services:
+  db:
+    image: mysql:oraclelinux9
+    hostname: mysql
+    restart: always
+    container_name: mysql_server
+    environment:
+      MYSQL_ROOT_PASSWORD: P@ssw0rd
+      MYSQL_DATABASE: go_gin_gone
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    # expose:
+    #   - "3306"
+
+volumes:
+  db_data:
