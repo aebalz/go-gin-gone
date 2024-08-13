@@ -3,7 +3,7 @@ package repositories_book
 import (
 	"github.com/aebalz/go-gin-gone/models"
 	"github.com/aebalz/go-gin-gone/utils"
-	"github.com/gin-gonic/gin"
+	"github.com/aebalz/go-gin-gone/utils/paginate"
 	"gorm.io/gorm"
 )
 
@@ -11,7 +11,7 @@ import (
 // data storage provider needs to implement to get
 // and store books
 type BookRepository interface {
-	FindAll(c *gin.Context) ([]models.Book, error)
+	FindAll(p *paginate.Param) ([]models.Book, int64, error)
 	FindByID(id uint) (models.Book, error)
 	Create(book models.Book) (models.Book, error)
 	Update(book models.Book) (models.Book, error)
@@ -28,15 +28,16 @@ func NewBookRepository(db *gorm.DB) BookRepository {
 	return &bookRepository{db}
 }
 
-func (r *bookRepository) FindAll(c *gin.Context) ([]models.Book, error) {
+func (r *bookRepository) FindAll(p *paginate.Param) ([]models.Book, int64, error) {
 	var books []models.Book
-	result := r.db.Find(&books)
-	return books, result.Error
+	var count int64
+	result := r.db.Model(&models.Book{}).Count(&count).Scopes(paginate.ORMScope(p)).Find(&books)
+	return books, count, result.Error
 }
 
 func (r *bookRepository) FindByID(id uint) (models.Book, error) {
 	var book models.Book
-	result := r.db.First(&book, id)
+	result := r.db.Model(&models.Book{}).First(&book, id)
 	return book, result.Error
 }
 
@@ -45,7 +46,7 @@ func (r *bookRepository) Create(book models.Book) (models.Book, error) {
 		return book, err
 	}
 
-	result := r.db.Create(&book)
+	result := r.db.Model(&models.Book{}).Create(&book)
 	return book, result.Error
 }
 
@@ -54,11 +55,11 @@ func (r *bookRepository) Update(book models.Book) (models.Book, error) {
 		return book, err
 	}
 
-	result := r.db.Save(&book)
+	result := r.db.Model(&models.Book{}).Save(&book)
 	return book, result.Error
 }
 
 func (r *bookRepository) Delete(id uint) error {
-	result := r.db.Delete(&models.Book{}, id)
+	result := r.db.Model(&models.Book{}).Delete(&models.Book{}, id)
 	return result.Error
 }

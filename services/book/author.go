@@ -6,6 +6,7 @@ import (
 
 	"github.com/aebalz/go-gin-gone/models"
 	repositories_book "github.com/aebalz/go-gin-gone/repositories/book"
+	"github.com/aebalz/go-gin-gone/utils/paginate"
 	"github.com/gin-gonic/gin"
 )
 
@@ -29,12 +30,23 @@ func NewAuthorService(repo repositories_book.AuthorRepository) AuthorService {
 }
 
 func (s *authorService) GetAuthors(c *gin.Context) {
-	authors, err := s.repo.FindAll()
+	// get paginator from query params
+	p := paginate.GetPaginateParam(c)
+
+	authors, count, err := s.repo.FindAll(p)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, authors)
+	c.JSON(http.StatusOK, paginate.PaginateRes[[]models.Author]{
+		Data: authors,
+		Paginate: paginate.PaginateMeta{
+			LastPage:    paginate.CalculateLastPage(count, p.Limit),
+			CurrentPage: p.Page,
+			Limit:       p.Limit,
+			Total:       count,
+		},
+	})
 }
 
 func (s *authorService) GetAuthor(c *gin.Context) {

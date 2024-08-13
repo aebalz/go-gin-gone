@@ -16,6 +16,10 @@ type MySQLDatabase struct {
 	db *gorm.DB
 }
 
+func NewMySQLDatabase() Database {
+	return &MySQLDatabase{}
+}
+
 func setupLoggerMode(isDebug bool) logGorm.Interface {
 	if isDebug {
 		return logGorm.Default.LogMode(logGorm.Info)
@@ -73,6 +77,10 @@ func (m *MySQLDatabase) Close() error {
 
 func (m *MySQLDatabase) GetDB() *gorm.DB {
 	return m.db
+}
+
+func (m *MySQLDatabase) GetConfig() gorm.Dialector {
+	return m.db.Dialector
 }
 
 func (m *MySQLDatabase) buildDBConnection(db configs.Config) string {
