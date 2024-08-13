@@ -1,7 +1,7 @@
 package routes
 
 import (
-	handlers_book "github.com/aebalz/go-gin-gone/handlers"
+	handlers_book "github.com/aebalz/go-gin-gone/handlers/book"
 	"github.com/aebalz/go-gin-gone/models"
 	repositories_book "github.com/aebalz/go-gin-gone/repositories/book"
 	services_book "github.com/aebalz/go-gin-gone/services/book"
