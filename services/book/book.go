@@ -6,6 +6,7 @@ import (
 
 	"github.com/aebalz/go-gin-gone/models"
 	repositories_book "github.com/aebalz/go-gin-gone/repositories/book"
+	"github.com/aebalz/go-gin-gone/utils/paginate"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,12 +31,23 @@ func NewBookService(repo repositories_book.BookRepository) BookService {
 }
 
 func (s *bookService) GetBooks(c *gin.Context) {
-	books, err := s.repo.FindAll(c)
+	// get paginator from query params
+	p := paginate.GetPaginateParam(c)
+
+	books, count, err := s.repo.FindAll(p)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, books)
+	c.JSON(http.StatusOK, paginate.PaginateRes[[]models.Book]{
+		Data: books,
+		Paginate: paginate.PaginateMeta{
+			LastPage:    paginate.CalculateLastPage(count, p.Limit),
+			CurrentPage: p.Page,
+			Limit:       p.Limit,
+			Total:       count,
+		},
+	})
 }
 
 func (s *bookService) GetBook(c *gin.Context) {

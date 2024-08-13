@@ -13,16 +13,13 @@ import (
 
 func main() {
 	configs.LoadConfig()
-
 	isDebug := utils.StringToBool(configs.AppConfig.AppDebug)
 
 	// Set up Database
-	var db database.Database
-	mysqlDB := &database.MySQLDatabase{}
-	if err := mysqlDB.Connect(configs.AppConfig, isDebug); err != nil {
+	db := database.NewMySQLDatabase()
+	if err := db.Connect(configs.AppConfig, isDebug); err != nil {
 		panic("Failed to connect to MySQL database: " + err.Error())
 	}
-	db = mysqlDB
 	defer db.Close()
 
 	// Set up the Gin router

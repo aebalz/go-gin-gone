@@ -3,11 +3,12 @@ package repositories_book
 import (
 	"github.com/aebalz/go-gin-gone/models"
 	"github.com/aebalz/go-gin-gone/utils"
+	"github.com/aebalz/go-gin-gone/utils/paginate"
 	"gorm.io/gorm"
 )
 
 type AuthorRepository interface {
-	FindAll() ([]models.Author, error)
+	FindAll(p *paginate.Param) ([]models.Author, int64, error)
 	FindByID(id uint) (models.Author, error)
 	Create(author models.Author) (models.Author, error)
 	Update(author models.Author) (models.Author, error)
@@ -24,15 +25,16 @@ func NewAuthorRepository(db *gorm.DB) AuthorRepository {
 	return &authorRepository{db}
 }
 
-func (r *authorRepository) FindAll() ([]models.Author, error) {
+func (r *authorRepository) FindAll(p *paginate.Param) ([]models.Author, int64, error) {
 	var authors []models.Author
-	result := r.db.Preload("Books").Find(&authors)
-	return authors, result.Error
+	var count int64
+	result := r.db.Model(&models.Author{}).Preload("Books").Count(&count).Scopes(paginate.ORMScope(p)).Find(&authors)
+	return authors, count, result.Error
 }
 
 func (r *authorRepository) FindByID(id uint) (models.Author, error) {
 	var author models.Author
-	result := r.db.First(&author, id)
+	result := r.db.Model(&models.Author{}).First(&author, id)
 	return author, result.Error
 }
 
@@ -42,7 +44,7 @@ func (r *authorRepository) Create(author models.Author) (models.Author, error) {
 		return author, err
 	}
 
-	result := r.db.Create(&author)
+	result := r.db.Model(&models.Author{}).Create(&author)
 	return author, result.Error
 }
 
@@ -52,11 +54,11 @@ func (r *authorRepository) Update(author models.Author) (models.Author, error) {
 		return author, err
 	}
 
-	result := r.db.Save(&author)
+	result := r.db.Model(&models.Author{}).Save(&author)
 	return author, result.Error
 }
 
 func (r *authorRepository) Delete(id uint) error {
-	result := r.db.Delete(&models.Author{}, id)
+	result := r.db.Model(&models.Author{}).Delete(&models.Author{}, id)
 	return result.Error
 }
