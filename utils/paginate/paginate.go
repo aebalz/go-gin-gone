@@ -1,6 +1,5 @@
 package paginate
 
-// TODO move to gcl utils
 import (
 	"math"
 	"strconv"
