@@ -28,7 +28,7 @@ func NewAuthorRepository(db *gorm.DB) AuthorRepository {
 func (r *authorRepository) FindAll(p *paginate.Param) ([]models.Author, int64, error) {
 	var authors []models.Author
 	var count int64
-	result := r.db.Model(&models.Author{}).Preload("Books").Count(&count).Scopes(paginate.ORMScope(p)).Find(&authors)
+	result := r.db.Model(&models.Author{}).Preload("Books").Count(&count).Scopes(paginate.GormPaginate(p)).Find(&authors)
 	return authors, count, result.Error
 }
 
