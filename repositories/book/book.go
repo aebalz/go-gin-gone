@@ -31,7 +31,7 @@ func NewBookRepository(db *gorm.DB) BookRepository {
 func (r *bookRepository) FindAll(p *paginate.Param) ([]models.Book, int64, error) {
 	var books []models.Book
 	var count int64
-	result := r.db.Model(&models.Book{}).Count(&count).Scopes(paginate.ORMScope(p)).Find(&books)
+	result := r.db.Model(&models.Book{}).Count(&count).Scopes(paginate.GormPaginate(p)).Find(&books)
 	return books, count, result.Error
 }
 

@@ -25,7 +25,7 @@ func GetPaginateParam(c *gin.Context) *Param {
 	}
 }
 
-func ORMScope(param *Param) func(db *gorm.DB) *gorm.DB {
+func GormPaginate(param *Param) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		if param.Page == 0 {
 			param.Page = 1
