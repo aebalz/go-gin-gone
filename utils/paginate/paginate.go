@@ -9,18 +9,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type PaginateMeta struct {
-	LastPage    int   `json:"last_page"`
-	CurrentPage int   `json:"current_page"`
-	Limit       int   `json:"limit"`
-	Total       int64 `json:"total"`
-}
-
-type Param struct {
-	Page  int `json:"page"`
-	Limit int `json:"limit"`
-}
-
 func GetPaginateParam(c *gin.Context) *Param {
 	page, _ := strconv.Atoi(c.Query("page"))
 	if page <= 0 {
