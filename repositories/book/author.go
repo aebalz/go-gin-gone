@@ -4,16 +4,9 @@ import (
 	"github.com/aebalz/go-gin-gone/models"
 	"github.com/aebalz/go-gin-gone/utils"
 	"github.com/aebalz/go-gin-gone/utils/paginate"
+	services_book "github.com/aebalz/go-gin-gone/services/book" // New import
 	"gorm.io/gorm"
 )
-
-type AuthorRepository interface {
-	FindAll(p *paginate.Param) ([]models.Author, int64, error)
-	FindByID(id uint) (models.Author, error)
-	Create(author models.Author) (models.Author, error)
-	Update(author models.Author) (models.Author, error)
-	Delete(id uint) error
-}
 
 // authorRepository implements the AuthorRepository interface
 type authorRepository struct {
@@ -21,7 +14,7 @@ type authorRepository struct {
 }
 
 // NewAuthorRepository creates a new author repository
-func NewAuthorRepository(db *gorm.DB) AuthorRepository {
+func NewAuthorRepository(db *gorm.DB) services_book.AuthorRepository { // Return type changed
 	return &authorRepository{db}
 }
 
