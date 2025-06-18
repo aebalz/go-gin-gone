@@ -1,154 +1,140 @@
 package services_book
 
-import (
-	"net/http"
-	"strconv"
+// CreateBookDTO defines the data transfer object for creating a new book.
+type CreateBookDTO struct {
+	Title    string  `json:"title"`
+	AuthorID uint    `json:"author_id"`
+	ISBN     string  `json:"isbn"`
+	Price    float64 `json:"price"`
+}
 
+// UpdateBookDTO defines the data transfer object for updating an existing book.
+type UpdateBookDTO struct {
+	Title    string  `json:"title"`
+	AuthorID uint    `json:"author_id"`
+	ISBN     string  `json:"isbn"`
+	Price    float64 `json:"price"`
+}
+
+// PatchBookDTO defines the data transfer object for partially updating an existing book.
+type PatchBookDTO struct {
+	Title    *string  `json:"title"`
+	AuthorID *uint    `json:"author_id"`
+	ISBN     *string  `json:"isbn"`
+	Price    *float64 `json:"price"`
+}
+
+import (
 	"github.com/aebalz/go-gin-gone/models"
-	repositories_book "github.com/aebalz/go-gin-gone/repositories/book"
 	"github.com/aebalz/go-gin-gone/utils/paginate"
-	"github.com/gin-gonic/gin"
 )
+
+// BookRepository defines the methods that any
+// data storage provider needs to implement to get
+// and store books
+type BookRepository interface {
+	FindAll(p *paginate.Param) ([]models.Book, int64, error)
+	FindByID(id uint) (models.Book, error)
+	Create(book models.Book) (models.Book, error)
+	Update(book models.Book) (models.Book, error)
+	Delete(id uint) error
+}
 
 // BookService defines the methods that a book service should implement
 type BookService interface {
-	GetBooks(c *gin.Context)
-	GetBook(c *gin.Context)
-	CreateBook(c *gin.Context)
-	UpdateBook(c *gin.Context)
-	PatchBook(c *gin.Context)
-	DeleteBook(c *gin.Context)
+	GetBooks(p *paginate.Param) ([]models.Book, int64, error)
+	GetBook(id uint) (models.Book, error)
+	CreateBook(bookDTO CreateBookDTO) (models.Book, error)
+	UpdateBook(id uint, bookDTO UpdateBookDTO) (models.Book, error)
+	PatchBook(id uint, bookDTO PatchBookDTO) (models.Book, error)
+	DeleteBook(id uint) error
 }
 
 // bookService implements the BookService interface
 type bookService struct {
-	repo repositories_book.BookRepository
+	repo BookRepository
 }
 
 // NewBookService creates a new book service
-func NewBookService(repo repositories_book.BookRepository) BookService {
+func NewBookService(repo BookRepository) BookService {
 	return &bookService{repo}
 }
 
-func (s *bookService) GetBooks(c *gin.Context) {
-	// get paginator from query params
-	p := paginate.GetPaginateParam(c)
-
+func (s *bookService) GetBooks(p *paginate.Param) ([]models.Book, int64, error) {
 	books, count, err := s.repo.FindAll(p)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return nil, 0, err
 	}
-	c.JSON(http.StatusOK, paginate.PaginateRes[[]models.Book]{
-		Data: books,
-		Paginate: paginate.PaginateMeta{
-			LastPage:    paginate.CalculateLastPage(count, p.Limit),
-			CurrentPage: p.Page,
-			Limit:       p.Limit,
-			Total:       count,
-		},
-	})
+	return books, count, nil
 }
 
-func (s *bookService) GetBook(c *gin.Context) {
-	id := c.Param("id")
-	bookID, err := strconv.ParseUint(id, 10, 32)
+func (s *bookService) GetBook(id uint) (models.Book, error) {
+	book, err := s.repo.FindByID(id)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
-		return
+		return models.Book{}, err
 	}
-	book, err := s.repo.FindByID(uint(bookID))
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Book not found"})
-		return
-	}
-	c.JSON(http.StatusOK, book)
+	return book, nil
 }
 
-func (s *bookService) CreateBook(c *gin.Context) {
-	var newBook models.Book
-	if err := c.ShouldBindJSON(&newBook); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+func (s *bookService) CreateBook(bookDTO CreateBookDTO) (models.Book, error) {
+	newBook := models.Book{
+		Title:    bookDTO.Title,
+		AuthorID: bookDTO.AuthorID,
+		ISBN:     bookDTO.ISBN,
+		Price:    bookDTO.Price,
 	}
 	book, err := s.repo.Create(newBook)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return models.Book{}, err
 	}
-	c.JSON(http.StatusCreated, book)
+	return book, nil
 }
 
-func (s *bookService) UpdateBook(c *gin.Context) {
-	id := c.Param("id")
-	var updatedBook models.Book
-	if err := c.ShouldBindJSON(&updatedBook); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+func (s *bookService) UpdateBook(id uint, bookDTO UpdateBookDTO) (models.Book, error) {
+	updatedBook := models.Book{
+		ID:       id,
+		Title:    bookDTO.Title,
+		AuthorID: bookDTO.AuthorID,
+		ISBN:     bookDTO.ISBN,
+		Price:    bookDTO.Price,
 	}
-	bookID, err := strconv.ParseUint(id, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
-		return
-	}
-	updatedBook.ID = uint(bookID)
 	book, err := s.repo.Update(updatedBook)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return models.Book{}, err
 	}
-	c.JSON(http.StatusOK, book)
+	return book, nil
 }
 
-func (s *bookService) PatchBook(c *gin.Context) {
-	id := c.Param("id")
-	var bookUpdates map[string]interface{}
-	if err := c.ShouldBindJSON(&bookUpdates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	bookID, err := strconv.ParseUint(id, 10, 32)
+func (s *bookService) PatchBook(id uint, bookDTO PatchBookDTO) (models.Book, error) {
+	book, err := s.repo.FindByID(id)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
-		return
+		return models.Book{}, err
 	}
-	book, err := s.repo.FindByID(uint(bookID))
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Book not found"})
-		return
-	}
-	if title, exists := bookUpdates["title"]; exists {
-		book.Title = title.(string)
-	}
-	// if author, exists := bookUpdates["author"]; exists {
-	// 	book.Author = author.(string)
-	// }
 
-	if isbn, exists := bookUpdates["isbn"]; exists {
-		book.ISBN = isbn.(string)
+	if bookDTO.Title != nil {
+		book.Title = *bookDTO.Title
 	}
-	if price, exists := bookUpdates["price"]; exists {
-		book.Price = price.(float64)
+	if bookDTO.AuthorID != nil {
+		book.AuthorID = *bookDTO.AuthorID
 	}
+	if bookDTO.ISBN != nil {
+		book.ISBN = *bookDTO.ISBN
+	}
+	if bookDTO.Price != nil {
+		book.Price = *bookDTO.Price
+	}
+
 	updatedBook, err := s.repo.Update(book)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return models.Book{}, err
 	}
-	c.JSON(http.StatusOK, updatedBook)
+	return updatedBook, nil
 }
 
-func (s *bookService) DeleteBook(c *gin.Context) {
-	id := c.Param("id")
-	bookID, err := strconv.ParseUint(id, 10, 32)
+func (s *bookService) DeleteBook(id uint) error {
+	err := s.repo.Delete(id)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
-		return
+		return err
 	}
-	err = s.repo.Delete(uint(bookID))
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Book not found"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"message": "Book deleted"})
+	return nil
 }

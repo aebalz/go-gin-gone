@@ -4,19 +4,9 @@ import (
 	"github.com/aebalz/go-gin-gone/models"
 	"github.com/aebalz/go-gin-gone/utils"
 	"github.com/aebalz/go-gin-gone/utils/paginate"
+	services_book "github.com/aebalz/go-gin-gone/services/book" // New import
 	"gorm.io/gorm"
 )
-
-// BookRepository defines the methods that any
-// data storage provider needs to implement to get
-// and store books
-type BookRepository interface {
-	FindAll(p *paginate.Param) ([]models.Book, int64, error)
-	FindByID(id uint) (models.Book, error)
-	Create(book models.Book) (models.Book, error)
-	Update(book models.Book) (models.Book, error)
-	Delete(id uint) error
-}
 
 // bookRepository implements the BookRepository interface
 type bookRepository struct {
@@ -24,7 +14,7 @@ type bookRepository struct {
 }
 
 // NewBookRepository creates a new book repository
-func NewBookRepository(db *gorm.DB) BookRepository {
+func NewBookRepository(db *gorm.DB) services_book.BookRepository { // Return type changed
 	return &bookRepository{db}
 }
 

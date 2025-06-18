@@ -1,115 +1,97 @@
 package services_book
 
 import (
-	"net/http"
-	"strconv"
-
 	"github.com/aebalz/go-gin-gone/models"
-	repositories_book "github.com/aebalz/go-gin-gone/repositories/book"
 	"github.com/aebalz/go-gin-gone/utils/paginate"
-	"github.com/gin-gonic/gin"
 )
 
-// AuthorService defines the methods that a author service should implement
+// CreateAuthorDTO defines the data transfer object for creating a new author.
+type CreateAuthorDTO struct {
+	Name string `json:"name" validate:"required"`
+}
+
+// UpdateAuthorDTO defines the data transfer object for updating an existing author.
+type UpdateAuthorDTO struct {
+	Name string `json:"name" validate:"required"`
+}
+
+// AuthorRepository defines the methods that any
+// data storage provider needs to implement to get
+// and store authors
+type AuthorRepository interface {
+	FindAll(p *paginate.Param) ([]models.Author, int64, error)
+	FindByID(id uint) (models.Author, error)
+	Create(author models.Author) (models.Author, error)
+	Update(author models.Author) (models.Author, error)
+	Delete(id uint) error
+}
+
+// AuthorService defines the methods that an author service should implement
 type AuthorService interface {
-	GetAuthors(c *gin.Context)
-	GetAuthor(c *gin.Context)
-	CreateAuthor(c *gin.Context)
-	UpdateAuthor(c *gin.Context)
-	DeleteAuthor(c *gin.Context)
+	GetAuthors(p *paginate.Param) ([]models.Author, int64, error)
+	GetAuthor(id uint) (models.Author, error)
+	CreateAuthor(dto CreateAuthorDTO) (models.Author, error)
+	UpdateAuthor(id uint, dto UpdateAuthorDTO) (models.Author, error)
+	DeleteAuthor(id uint) error
 }
 
 // authorService implements the AuthorService interface
 type authorService struct {
-	repo repositories_book.AuthorRepository
+	repo AuthorRepository
 }
 
 // NewAuthorService creates a new author service
-func NewAuthorService(repo repositories_book.AuthorRepository) AuthorService {
+func NewAuthorService(repo AuthorRepository) AuthorService {
 	return &authorService{repo}
 }
 
-func (s *authorService) GetAuthors(c *gin.Context) {
-	// get paginator from query params
-	p := paginate.GetPaginateParam(c)
-
+func (s *authorService) GetAuthors(p *paginate.Param) ([]models.Author, int64, error) {
 	authors, count, err := s.repo.FindAll(p)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return nil, 0, err
 	}
-	c.JSON(http.StatusOK, paginate.PaginateRes[[]models.Author]{
-		Data: authors,
-		Paginate: paginate.PaginateMeta{
-			LastPage:    paginate.CalculateLastPage(count, p.Limit),
-			CurrentPage: p.Page,
-			Limit:       p.Limit,
-			Total:       count,
-		},
-	})
+	return authors, count, nil
 }
 
-func (s *authorService) GetAuthor(c *gin.Context) {
-	id := c.Param("id")
-	authorID, err := strconv.ParseUint(id, 10, 32)
+func (s *authorService) GetAuthor(id uint) (models.Author, error) {
+	author, err := s.repo.FindByID(id)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
-		return
+		return models.Author{}, err
 	}
-	author, err := s.repo.FindByID(uint(authorID))
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Author not found"})
-		return
-	}
-	c.JSON(http.StatusOK, author)
+	return author, nil
 }
 
-func (s *authorService) CreateAuthor(c *gin.Context) {
-	var newAuthor models.Author
-	if err := c.ShouldBindJSON(&newAuthor); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+func (s *authorService) CreateAuthor(dto CreateAuthorDTO) (models.Author, error) {
+	author := models.Author{
+		Name: dto.Name,
 	}
-	author, err := s.repo.Create(newAuthor)
+	createdAuthor, err := s.repo.Create(author)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return models.Author{}, err
 	}
-	c.JSON(http.StatusCreated, author)
+	return createdAuthor, nil
 }
 
-func (s *authorService) UpdateAuthor(c *gin.Context) {
-	id := c.Param("id")
-	var updatedAuthor models.Author
-	if err := c.ShouldBindJSON(&updatedAuthor); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	authorID, err := strconv.ParseUint(id, 10, 32)
+func (s *authorService) UpdateAuthor(id uint, dto UpdateAuthorDTO) (models.Author, error) {
+	// First, check if the author exists
+	authorToUpdate, err := s.repo.FindByID(id)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
-		return
+		return models.Author{}, err // Author not found
 	}
-	updatedAuthor.ID = uint(authorID)
-	author, err := s.repo.Update(updatedAuthor)
+
+	authorToUpdate.Name = dto.Name
+
+	updatedAuthor, err := s.repo.Update(authorToUpdate)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return models.Author{}, err
 	}
-	c.JSON(http.StatusOK, author)
+	return updatedAuthor, nil
 }
 
-func (s *authorService) DeleteAuthor(c *gin.Context) {
-	id := c.Param("id")
-	authorID, err := strconv.ParseUint(id, 10, 32)
+func (s *authorService) DeleteAuthor(id uint) error {
+	err := s.repo.Delete(id)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
-		return
+		return err
 	}
-	err = s.repo.Delete(uint(authorID))
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Author not found"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"message": "Author deleted"})
+	return nil
 }

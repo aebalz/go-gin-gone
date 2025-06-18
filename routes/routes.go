@@ -22,9 +22,16 @@ func InitialRoutesApp(r *gin.Engine, db *gorm.DB) {
 	bookService := services_book.NewBookService(bookRepo)
 
 	// Handlers
+	// Instantiate BookHandler
+	bookHandler := handlers_book.NewBookHandler(bookService)
+	// Instantiate AuthorHandler
+	authorHandler := handlers_book.NewAuthorHandler(authorService)
 
 	// Root Routes : "{host}/api/v1/..."
 	api := r.Group("/api/v1")
-	handlers_book.RegisterAuthorRoutes(api, authorService)
-	handlers_book.RegisterBookRoutes(api, bookService)
+	// Register Author Routes
+	handlers_book.RegisterAuthorRoutes(api, authorHandler)
+
+	// Register Book Routes with the new BookHandler
+	handlers_book.RegisterBookRoutes(api, bookHandler)
 }
